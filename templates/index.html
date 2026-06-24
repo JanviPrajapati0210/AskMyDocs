@@ -1,0 +1,135 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RAG Chatbot — Multi-Document Q&A</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+
+  <!-- ── Header ─────────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-left">
+      <span class="header-icon">📄</span>
+      <div>
+        <h1 class="header-title">RAG Chatbot</h1>
+        <span class="header-sub">Multi-Document Q&amp;A</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="header-badge">Groq · LangChain · ChromaDB</span>
+    </div>
+  </header>
+
+  <!-- ── Main layout ────────────────────────────────────────────── -->
+  <main class="layout">
+
+    <!-- ── Sidebar ──────────────────────────────────────────────── -->
+    <aside class="sidebar">
+
+      <!-- Upload card -->
+      <div class="card">
+        <h3 class="card-title">📁 Upload Documents</h3>
+
+        <div class="upload-area" id="upload-area"
+             onclick="document.getElementById('file-input').click()"
+             ondragover="handleDragOver(event)"
+             ondrop="handleDrop(event)">
+          <div class="upload-icon">⬆️</div>
+          <p class="upload-hint">Click or drag &amp; drop</p>
+          <p class="upload-types">PDF · DOCX · TXT</p>
+        </div>
+
+        <input type="file" id="file-input" multiple
+               accept=".pdf,.docx,.txt"
+               onchange="handleFiles(this.files)" />
+
+        <!-- Selected file badges -->
+        <div id="file-list"></div>
+
+        <button class="btn btn-primary" id="upload-btn" onclick="uploadFiles()">
+          Upload &amp; Process
+        </button>
+
+        <!-- Progress bar -->
+        <div class="progress-wrap" id="upload-progress">
+          <div class="progress-bar" id="upload-bar"></div>
+        </div>
+
+        <!-- Upload status / error -->
+        <div class="upload-status" id="upload-status"></div>
+        <div class="error-msg" id="upload-error"></div>
+      </div>
+
+      <!-- Action buttons card -->
+      <div class="card">
+        <h3 class="card-title">⚙️ Actions</h3>
+        <button class="btn btn-success" onclick="newChat()">
+          💬 New Chat
+        </button>
+        <button class="btn btn-danger" onclick="resetAll()">
+          🗑 Clear All Documents
+        </button>
+      </div>
+
+      <!-- Suggested questions card -->
+      <div class="card">
+        <h3 class="card-title">💡 Try asking</h3>
+        <div class="suggestions">
+          <button class="suggestion-btn"
+                  onclick="setQuestion('Summarise the key points of this document')">
+            Summarise the key points
+          </button>
+          <button class="suggestion-btn"
+                  onclick="setQuestion('What are the main topics covered?')">
+            What are the main topics?
+          </button>
+          <button class="suggestion-btn"
+                  onclick="setQuestion('Explain this in simple terms')">
+            Explain in simple terms
+          </button>
+          <button class="suggestion-btn"
+                  onclick="setQuestion('What are the most important rules or policies?')">
+            Important rules or policies
+          </button>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- ── Chat area ─────────────────────────────────────────────── -->
+    <section class="chat-section card">
+
+      <!-- Message list -->
+      <div class="messages" id="messages">
+        <div class="empty-state" id="empty-state">
+          <div class="empty-icon">📄</div>
+          <p class="empty-title">No documents loaded</p>
+          <p class="empty-hint">Upload a PDF, DOCX, or TXT file to get started</p>
+        </div>
+      </div>
+
+      <!-- Input bar -->
+      <div class="input-bar">
+        <textarea
+          id="question"
+          class="input-field"
+          placeholder="Ask anything about your documents..."
+          rows="1"
+          onkeydown="handleKey(event)"
+          oninput="autoResize(this)">
+        </textarea>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()">
+          ➤
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+</body>
+</html>
