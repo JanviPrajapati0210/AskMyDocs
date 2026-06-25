@@ -70,23 +70,28 @@ def build_chain():
 
 
 # 4. Ask a question 
+
 def ask(question: str) -> dict:
     """
-    Main entry point. Takes a question string, runs the RAG chain,
-    returns answer + sources as a dict.
+    Runs the RAG chain. Returns answer + sources.
+    Raises ValueError if no documents have been uploaded yet.
     """
-    # Get answer from chain
-    chain = build_chain()
+    # Guard: check ChromaDB has documents
+    vectorstore = get_vectorstore()
+    collection  = vectorstore._collection
+    if collection.count() == 0:
+        raise ValueError(
+            "No documents uploaded yet. Please upload a PDF, DOCX, or TXT file first."
+        )
+
+    #  Run chain 
+    chain  = build_chain()
     answer = chain.invoke(question)
 
-    # Also get sources separately for citation display
-    vectorstore = get_vectorstore()
+    #  Get sources 
     source_docs = vectorstore.similarity_search(question, k=4)
     sources = list(set(
         doc.metadata.get("source", "unknown") for doc in source_docs
     ))
 
-    return {
-        "answer":  answer,
-        "sources": sources
-    }
+    return {"answer": answer, "sources": sources}
