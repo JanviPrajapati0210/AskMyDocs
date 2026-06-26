@@ -1,13 +1,13 @@
 import os
 import traceback
 import uuid
-from flask import Flask, request, jsonify, render_template, session
+from flask import Flask, request, jsonify, render_template, session,Response
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from rag.loader import load_and_chunk
 from rag.embedder import add_documents, reset_vectorstore
 from rag.chain import ask, create_memory
-
+import json
 load_dotenv()
 
 app = Flask(__name__)
@@ -148,6 +148,43 @@ def reset():
         return jsonify({"error": str(e)}), 500
 
 
-#  Run
+@app.route("/stream", methods=["GET"])
+def stream():
+    """
+    SSE endpoint — streams Groq tokens to the browser one by one.
+    Uses GET so the browser can open it with fetch() + ReadableStream.
+    """
+    question = request.args.get("q", "").strip()
+
+    if not question:
+        def error_gen():
+            yield f'data: {json.dumps({"error": "Question cannot be empty."})}\n\n'
+        return Response(error_gen(), mimetype="text/event-stream")
+
+    if len(question) > 2000:
+        def error_gen():
+            yield f'data: {json.dumps({"error": "Question too long."})}\n\n'
+        return Response(error_gen(), mimetype="text/event-stream")
+
+    memory = get_memory()
+
+    def generate():
+        try:
+            from rag.chain import ask_stream
+            for chunk in ask_stream(question, memory):
+                yield f"data: {json.dumps(chunk)}\n\n"
+        except Exception as e:
+            yield f'data: {json.dumps({"error": str(e)})}\n\n'
+
+    return Response(
+        generate(),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",   # important for Nginx/Render — disables buffering
+            "Connection": "keep-alive",
+        }
+    )
+
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
