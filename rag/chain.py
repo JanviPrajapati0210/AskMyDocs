@@ -5,6 +5,7 @@ from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
 from langchain.prompts import PromptTemplate
 from rag.embedder import get_vectorstore
+import json
 
 load_dotenv()
 
@@ -114,3 +115,53 @@ def ask(question: str, memory) -> dict:
         "answer":  result["answer"],
         "sources": sources           # now a list of dicts, not just strings
     }
+
+
+def ask_stream(question: str, memory):
+    """
+    Generator version of ask() — yields tokens one by one for SSE streaming.
+    Yields dicts: {"token": "..."} for each chunk, then {"done": True, "sources": [...]}
+    """
+    # Guard: check ChromaDB has documents
+    vectorstore = get_vectorstore()
+    if vectorstore._collection.count() == 0:
+        yield {"error": "No documents uploaded yet. Please upload a file first."}
+        return
+
+    try:
+        chain = build_chain(memory)
+
+        # Collect full answer for memory update + sources
+        full_answer = ""
+
+        # stream() yields string chunks from the LLM
+        for chunk in chain.stream({"question": question}):
+            # ConversationalRetrievalChain streams the answer key
+            token = chunk.get("answer", "")
+            if token:
+                full_answer += token
+                yield {"token": token}
+
+        # After streaming — get source citations
+        source_docs = vectorstore.similarity_search(question, k=4)
+        seen    = set()
+        sources = []
+        for doc in source_docs:
+            filename = os.path.basename(doc.metadata.get("source", "unknown"))
+            page     = doc.metadata.get("page", None)
+            excerpt  = " ".join(doc.page_content.split())[:120] + "..."
+            key = f"{filename}_{page}"
+            if key in seen:
+                continue
+            seen.add(key)
+            sources.append({
+                "filename": filename,
+                "page":     (page + 1) if page is not None else None,
+                "excerpt":  excerpt
+            })
+
+        # Final signal — tell frontend streaming is done
+        yield {"done": True, "sources": sources}
+
+    except Exception as e:
+        yield {"error": str(e)}
