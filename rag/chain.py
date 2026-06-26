@@ -65,14 +65,12 @@ def build_chain(memory):
 
 
 # 4. Ask a question (main entry point) 
+
+
 def ask(question: str, memory) -> dict:
     """
     Runs the conversational RAG chain with memory.
-    Returns answer + source filenames.
-
-    Args:
-        question: user's question string
-        memory:   ConversationBufferMemory object for this session
+    Returns answer + rich source citations (filename, page, excerpt).
     """
     # Guard: check ChromaDB has documents
     vectorstore = get_vectorstore()
@@ -84,13 +82,35 @@ def ask(question: str, memory) -> dict:
     chain  = build_chain(memory)
     result = chain.invoke({"question": question})
 
-    # Extract sources from returned documents
-    sources = list(set(
-        doc.metadata.get("source", "unknown")
-        for doc in result.get("source_documents", [])
-    ))
+    # Build rich citations
+    seen    = set()
+    sources = []
+
+    for doc in result.get("source_documents", []):
+        # Extract metadata
+        raw_source = doc.metadata.get("source", "unknown")
+        filename   = os.path.basename(raw_source)   # strip full path
+        page       = doc.metadata.get("page", None)  # PDF page number (0-indexed)
+        content    = doc.page_content.strip()
+
+        # Build a short excerpt — first 120 characters, clean whitespace
+        excerpt = " ".join(content.split())[:120]
+        if len(" ".join(content.split())) > 120:
+            excerpt += "..."
+
+        # Deduplicate by filename + page combo
+        key = f"{filename}_{page}"
+        if key in seen:
+            continue
+        seen.add(key)
+
+        sources.append({
+            "filename": filename,
+            "page":     (page + 1) if page is not None else None,  # convert to 1-indexed
+            "excerpt":  excerpt
+        })
 
     return {
         "answer":  result["answer"],
-        "sources": sources
+        "sources": sources           # now a list of dicts, not just strings
     }
