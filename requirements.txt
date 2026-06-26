@@ -1,12 +1,12 @@
 flask
 python-dotenv
-langchain
-langchain-community
-langchain-groq
+langchain==0.3.27
+langchain-community==0.3.27
+langchain-groq==0.2.5
 chromadb
 sentence-transformers
 pypdf
+requests
 python-docx
 tiktoken
-unstructured
 gunicorn
