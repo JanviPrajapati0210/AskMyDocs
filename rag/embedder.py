@@ -11,15 +11,25 @@ EMBED_MODEL  = "all-MiniLM-L6-v2"
 TOP_K        = 4                    
 
 
-# 1. Load the embedding model (done once, reused) 
+# 1. Load the embedding model  
+
+_embeddings_instance = None
 
 def get_embeddings():
-    """Returns a LangChain-compatible HuggingFace embedding model."""
-    return HuggingFaceEmbeddings(
-        model_name=EMBED_MODEL,
-        model_kwargs={"device": "cpu"},   
-        encode_kwargs={"normalize_embeddings": True}
-    )
+    """
+    Returns a cached LangChain-compatible HuggingFace embedding model.
+    Loading this model is expensive (~90MB + init time) — caching it
+    as a singleton prevents repeated memory spikes on every request,
+    which is critical on memory-constrained hosting (e.g. Render free tier).
+    """
+    global _embeddings_instance
+    if _embeddings_instance is None:
+        _embeddings_instance = HuggingFaceEmbeddings(
+            model_name=EMBED_MODEL,
+            model_kwargs={"device": "cpu"},
+            encode_kwargs={"normalize_embeddings": True}
+        )
+    return _embeddings_instance
 
 
 #  2. Get (or create) the ChromaDB vector store 
