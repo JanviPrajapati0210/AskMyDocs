@@ -12,5 +12,4 @@ services:
         sync: false
       - key: CHROMA_DIR
         value: /tmp/chroma_db
-      - key: PYTHON_VERSION
-        value: 3.11.0
+      
