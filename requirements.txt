@@ -6,7 +6,9 @@ langchain-groq==0.2.5
 chromadb
 sentence-transformers
 pypdf
-requests
 python-docx
 tiktoken
 gunicorn
+requests
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
